@@ -97,31 +97,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_
+
 	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6)) {
-
-		  curr_led_states[0] = !curr_led_states[0];
-
-	  }
-
-	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7)) {
-
-		  curr_led_states[1] = !curr_led_states[1];
-
-	  }
-
-	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9)){
-
-		  curr_led_states[2] = !curr_led_states[2];
-
-	  }
-
-	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8)){
-
-		  curr_led_states[3] = !curr_led_states[3];
-
-	  }
-
-	  if(curr_led_states[0]) {
 
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 
@@ -131,7 +109,7 @@ int main(void)
 
 	  }
 
-	  if(curr_led_states[1]) {
+	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7)) {
 
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
 
@@ -141,7 +119,7 @@ int main(void)
 
 	  }
 
-	  if(curr_led_states[2]) {
+	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9)) {
 
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
 
@@ -151,7 +129,7 @@ int main(void)
 
 	  }
 
-	  if(curr_led_states[3]) {
+	  if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8)) {
 
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
 
