@@ -31,9 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-void microsecond_delay(uint16_t time);
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim);
-void echo_callback(TIM_HandleTypeDef* htim);
+#define TEXT_BUFFER_LENGTH 50
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,11 +42,15 @@ void echo_callback(TIM_HandleTypeDef* htim);
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim10;
 
+UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
 
 //--------------------START PIN CONSTANTS--------------------
 const uint16_t TRIG_PIN = GPIO_PIN_9; //Port B
 const uint16_t ECHO_PIN = GPIO_PIN_8; //Port B
+const uint8_t HCSR04_READING_DELAY = 200; //Delay between successive reads of the HC-SR04, milliseconds
+const uint8_t UART_PRINT_TIMEOUT = 10;
 //---------------------END PIN CONSTANTS---------------------
 
 //---------------START INPUT CAPTURE VARIABLES---------------
@@ -57,14 +59,20 @@ uint16_t second_capture_time = 0;
 uint8_t is_second_capture = 0;
 uint16_t time_difference = 0;
 uint8_t distance = 0;
+uint8_t text_buffer[TEXT_BUFFER_LENGTH] = "bean: yogurt\n gurt: yo\n yo: sybau";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM10_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void microsecond_delay(uint16_t time);
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim);
+void echo_callback(TIM_HandleTypeDef* htim);
+void trigger_hcsr04(void);
+void print_with_uart(const uint8_t str[]);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -125,6 +133,29 @@ void echo_callback(TIM_HandleTypeDef* htim) {
 
 }
 
+void trigger_hcsr04(void) {
+
+	HAL_GPIO_WritePin(GPIOB, TRIG_PIN, GPIO_PIN_SET);
+	microsecond_delay(10);
+	HAL_GPIO_WritePin(GPIOB, TRIG_PIN, GPIO_PIN_RESET);
+
+}
+
+void print_with_uart(const uint8_t str[]) {
+
+	uint8_t i;
+	uint8_t curr;
+	for(i = 0; i < TEXT_BUFFER_LENGTH - 1 && str[i] != '\0'; i++) {
+
+		curr = str[i];
+		text_buffer[i] = curr;
+
+	}
+	text_buffer[i] = '\0';
+	HAL_UART_Transmit(&huart2, text_buffer, i + 1, UART_PRINT_TIMEOUT);
+
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -157,18 +188,18 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM10_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  HAL_GPIO_WritePin(GPIOB, TRIG_PIN, GPIO_PIN_SET);
-	  microsecond_delay(10);
-	  HAL_GPIO_WritePin(GPIOB, TRIG_PIN, GPIO_PIN_RESET);
+  while (1) {
 
+	  uint8_t goon_str[] = {'g', 'o', 'o', 'n', 'i', 'n', 'g', ' ', 'p', 'a', 'r', 't', ' ', '3', '\r', '\n', '\0'};
+	  print_with_uart(goon_str);
+	  HAL_Delay(1000);
 
 
     /* USER CODE END WHILE */
@@ -270,6 +301,39 @@ static void MX_TIM10_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -282,6 +346,7 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
