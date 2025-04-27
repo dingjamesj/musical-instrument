@@ -31,7 +31,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+void microsecond_delay(uint16_t time);
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim);
+void echo_callback(TIM_HandleTypeDef* htim);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,6 +46,17 @@ TIM_HandleTypeDef htim10;
 
 /* USER CODE BEGIN PV */
 
+//--------------------START PIN CONSTANTS--------------------
+const uint16_t TRIG_PIN = GPIO_PIN_9; //Port B
+const uint16_t ECHO_PIN = GPIO_PIN_8; //Port B
+//---------------------END PIN CONSTANTS---------------------
+
+//---------------START INPUT CAPTURE VARIABLES---------------
+uint16_t first_capture_time = 0;
+uint16_t second_capture_time = 0;
+uint8_t is_second_capture = 0;
+uint16_t time_difference = 0;
+uint8_t distance = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,6 +69,61 @@ static void MX_TIM10_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void microsecond_delay(uint16_t time) {
+
+	__HAL_TIM_SET_COUNTER(&htim10, 0);
+	while(__HAL_TIM_GET_COUNTER(&htim10) < time);
+
+}
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
+
+	if(htim == &htim10 && htim->Channel == TIM_CHANNEL_1) {
+
+		echo_callback(htim);
+
+	}
+
+}
+
+void echo_callback(TIM_HandleTypeDef* htim) {
+
+	if(is_second_capture == 0) {
+
+		//Callback for first capture
+
+		first_capture_time = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		is_second_capture = 1;
+		//The second capture will be a fall from high to low.
+		__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_FALLING);
+
+	} else {
+
+		//Callback for second capture
+
+		second_capture_time = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		is_second_capture = 0;
+		__HAL_TIM_SET_COUNTER(htim, 0);
+
+		if(second_capture_time > first_capture_time) {
+
+			time_difference = second_capture_time - first_capture_time;
+
+		} else {
+
+			time_difference = (0xffff - first_capture_time) + second_capture_time;
+
+		}
+
+		distance = time_difference * 0.0343 / 2;
+
+		//The first capture will be a rise from low to high.
+		__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
+
+	}
+
+}
 
 /* USER CODE END 0 */
 
@@ -97,9 +165,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-	  HAL_Delay(10);
-	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+	  HAL_GPIO_WritePin(GPIOB, TRIG_PIN, GPIO_PIN_SET);
+	  microsecond_delay(10);
+	  HAL_GPIO_WritePin(GPIOB, TRIG_PIN, GPIO_PIN_RESET);
+
+
 
     /* USER CODE END WHILE */
 
@@ -172,7 +242,7 @@ static void MX_TIM10_Init(void)
 
   /* USER CODE END TIM10_Init 1 */
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 0;
+  htim10.Init.Prescaler = 84-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim10.Init.Period = 65535;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
